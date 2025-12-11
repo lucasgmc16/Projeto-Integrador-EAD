@@ -19,7 +19,6 @@ const Parceiros = () => {
 
   return (
     <div className="parceiros-page">
-      {/* Header */}
       <header className="header">
         <div className="container">
           <Link to="/" className="logo">
@@ -69,7 +68,7 @@ const Parceiros = () => {
 
           <div className="hero-image">
             <div className="image-wrapper">
-              {/* Substitua pela imagem real */}
+              
               <img 
                 src="https://rwn360.com.br/wp-content/uploads/2024/04/autismo-1-768x513-1.jpg" 
                 alt="Pessoas colaborando" 
@@ -81,8 +80,6 @@ const Parceiros = () => {
           </div>
         </div>
       </section>
-
-      {/* Stats Section */}
       <section className="stats-section">
         <div className="stats-container">
           <div className="stat-card">
@@ -119,7 +116,6 @@ const Parceiros = () => {
         </div>
       </section>
 
-      {/* Parceiros Grid */}
       <section className="parceiros-grid-section">
         <div className="section-header">
           <h2>Nossos Parceiros</h2>
@@ -142,7 +138,7 @@ const Parceiros = () => {
           
         </div>
 
-        {/* CTA para se tornar parceiro */}
+
         <div className="cta-section">
           <div className="cta-card">
             <Handshake size={48} />
@@ -156,7 +152,6 @@ const Parceiros = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="footer">
         <div className="container footer-content">
           <div className="footer-logo">

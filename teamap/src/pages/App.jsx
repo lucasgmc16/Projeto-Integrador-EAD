@@ -11,6 +11,7 @@ import Cadastro from '../pages/Cadastro';
 import EsqueceuSenha from '../pages/EsqueceuSenha';
 import './App.css';
 
+//Gerenciando as rotas
 function App() {
   return (
     <Router>

@@ -1,16 +1,20 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
-import { MapPin, Heart, Star, Filter, Search, Plus, X, User, LogOut, Settings } from 'lucide-react';
+import { MapPin, Heart, Star, Filter, Search, Plus, X, User, LogOut, Settings, Loader2 } from 'lucide-react';
 import './MapPage.css';
 import logo from '../assets/Logo.png';
+import { authAPI, locaisAPI, avaliacoesAPI } from '../services/api';
 
 const libraries = ['places'];
 
 const MapPage = () => {
-  // API KEY
+  const navigate = useNavigate();
+  
+  // chave da api do google maps
   const GOOGLE_MAPS_API_KEY = 'AIzaSyDlAPjxU5ImabHaPjiPOu0xqjWta_us5RY';
-
+  
+  // carrega a api do google
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
@@ -20,77 +24,35 @@ const MapPage = () => {
   const [map, setMap] = useState(null);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ NOVO
+  const [selectedGooglePlace, setSelectedGooglePlace] = useState(null); // ✅ NOVO
   const placeInputRef = useRef(null);
   const searchInputRef = useRef(null);
-
-  // Locais com avaliações TEA
-  const [locations, setLocations] = useState([
-    {
-      id: 1,
-      name: 'Parque Central de Arapiraca',
-      position: { lat: -9.7524, lng: -36.6612 },
-      rating: 4.8,
-      reviews: 52,
-      image: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400',
-      category: 'lazer',
-      isFavorite: false,
-      teaRatings: {
-        acolhimento: 5,
-        ruidoBaixo: 4,
-        iluminacao: 5,
-        espacoCalmo: 5
-      }
-    },
-    {
-      id: 2,
-      name: 'Biblioteca Municipal',
-      position: { lat: -9.7490, lng: -36.6580 },
-      rating: 4.6,
-      reviews: 28,
-      image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=400',
-      category: 'cultura',
-      isFavorite: false,
-      teaRatings: {
-        acolhimento: 4,
-        ruidoBaixo: 5,
-        iluminacao: 4,
-        espacoCalmo: 5
-      }
-    },
-    {
-      id: 3,
-      name: 'Escola Municipal Dom Pedro II',
-      position: { lat: -9.7560, lng: -36.6650 },
-      rating: 4.3,
-      reviews: 15,
-      image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400',
-      category: 'educacao',
-      isFavorite: false,
-      teaRatings: {
-        acolhimento: 4,
-        ruidoBaixo: 3,
-        iluminacao: 4,
-        espacoCalmo: 4
-      }
-    },
-    {
-      id: 4,
-      name: 'Centro de Saúde Arapiraca',
-      position: { lat: -9.7500, lng: -36.6600 },
-      rating: 4.5,
-      reviews: 34,
-      image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400',
-      category: 'saude',
-      isFavorite: false,
-      teaRatings: {
-        acolhimento: 5,
-        ruidoBaixo: 4,
-        iluminacao: 4,
-        espacoCalmo: 5
-      }
+  // Controla a autenticação
+  const [isLoggedIn, setIsLoggedIn] = useState(authAPI.isAuthenticated());
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userData, setUserData] = useState(authAPI.getUser());
+  
+  // verifica se ta logado quando abre a pagina
+  
+  useEffect(() => {
+    const user = authAPI.getUser();
+    if (user) {
+      setIsLoggedIn(true);
+      setUserData(user);
     }
-  ]);
+  }, []);
 
+  // Função de logout
+  const handleLogout = () => {
+    authAPI.logout();
+    setIsLoggedIn(false);
+    setUserData(null);
+    setShowUserMenu(false);
+    navigate('/');
+  };
+  // lista de locais e filtros
+  const [locations, setLocations] = useState([]);
   const [filters, setFilters] = useState({
     categoria: 'todas',
     baixoRuido: false,
@@ -98,32 +60,88 @@ const MapPage = () => {
     espacoCalmo: false
   });
 
-  const [showFilters, setShowFilters] = useState(false);
+  // Função para pegar imagem do Google
+  const getPlacePhotoUrl = (place) => {
+  // Verificar se há fotos disponíveis
+  if (place.photos && place.photos.length > 0) {
+    // Pegar a primeira foto
+    const photo = place.photos[0];
+    return photo.getUrl({ maxWidth: 400 });
+  }
   
-  // Estado do formulário de avaliação
+  // Se não tiver foto, usar imagem padrão
+  return 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400';
+};
+
+
+  // Carrega locais do banco de dados ao iniciar
+  const loadLocations = async () => {
+  try {
+    console.log('🔄 Carregando locais do banco...');
+    const response = await locaisAPI.list();
+    
+    if (response.data && response.data.length > 0) {
+      const formattedLocations = response.data.map(local => {
+        return {
+          id: local.id,
+          name: local.nome,
+          position: {
+            lat: parseFloat(local.latitude),
+            lng: parseFloat(local.longitude)
+          },
+          rating: parseFloat(local.media_avaliacoes) || 0,
+          reviews: parseInt(local.total_avaliacoes) || 0,
+          image: local.imagem || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400',
+          category: local.categoria,
+          isFavorite: false,
+          teaRatings: {
+            acolhimento: local.tea_ratings?.acolhimento || 3,
+            ruidoBaixo: local.tea_ratings?.ruido_baixo || 3,
+            iluminacao: local.tea_ratings?.iluminacao || 3,
+            espacoCalmo: local.tea_ratings?.espaco_calmo || 3
+          }
+        };
+      });
+      
+      setLocations(formattedLocations);
+      console.log('✅ Locais carregados:', formattedLocations.length);
+      console.log('📊 Exemplo de local com ratings:', formattedLocations[0]);
+    } else {
+      console.log('ℹ️ Nenhum local encontrado no banco');
+      setLocations([]);
+    }
+  } catch (error) {
+    console.error('❌ Erro ao carregar locais:', error);
+    console.error('Detalhes:', error.response?.data || error.message);
+  }
+};
+
+useEffect(() => {
+  loadLocations();
+}, []);
+
+
+  const [showFilters, setShowFilters] = useState(false);
+  // dados do formulário de avaliação
   const [reviewForm, setReviewForm] = useState({
     placeName: '',
     placeAddress: '',
-    // Ambiente Sensorial
     nivelRuido: 3,
-    iluminacao: 'natural', // suave, natural, forte
+    iluminacao: 'natural',
     cheirosFortes: false,
-    movimentoVisual: 'medio', // pouco, medio, intenso
+    movimentoVisual: 'medio',
     espacoCalmo: true,
-    // Acessibilidade e Estrutura
     banheiroAcessivel: true,
     sinalizacaoVisual: 3,
     mapasRotas: true,
-    controleLotacao: 'tranquilo', // tranquilo, moderado, cheio
+    controleLotacao: 'tranquilo',
     filasPreferenciais: false,
-    // Previsibilidade e Rotina
     horariosTranquilos: true,
-    mudancasAmbiente: 'baixa', // baixa, media, alta
+    mudancasAmbiente: 'baixa',
     agendamentoAntecipado: false,
-    // Conforto
     temperaturaConfortavel: 3,
     assentosConfortaveis: true,
-    espacoPessoal: 'amplo', // amplo, medio, apertado
+    espacoPessoal: 'amplo',
     comentario: ''
   });
 
@@ -131,16 +149,15 @@ const MapPage = () => {
     width: '100%',
     height: '100%'
   };
-
+  // centro do mapa em maceio
   const center = {
     lat: -9.7524,
     lng: -36.6612
   };
-
+  // inicializa o mapa
   const onLoad = useCallback((map) => {
     setMap(map);
     
-    // Inicializar autocomplete
     if (searchInputRef.current && window.google) {
       const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
         componentRestrictions: { country: 'br' }
@@ -151,13 +168,6 @@ const MapPage = () => {
         if (place.geometry) {
           map.panTo(place.geometry.location);
           map.setZoom(16);
-          
-          // Preencher formulário com dados do lugar
-          setReviewForm({
-            ...reviewForm,
-            placeName: place.name,
-            placeAddress: place.formatted_address
-          });
         }
       });
     }
@@ -172,7 +182,7 @@ const MapPage = () => {
       loc.id === id ? { ...loc, isFavorite: !loc.isFavorite } : loc
     ));
   };
-
+  // seleciona um local no mapa
   const handleMarkerClick = (location) => {
     setSelectedPlace(location);
     if (map) {
@@ -180,10 +190,16 @@ const MapPage = () => {
     }
   };
 
+  // Verifica se esta logado antes de abrir a classificacao
   const handleAddReview = () => {
+    if (!authAPI.isAuthenticated()) {
+      alert('Você precisa estar logado para avaliar um local!');
+      navigate('/login');
+      return;
+    }
+
     setShowReviewModal(true);
     
-    // Inicializar autocomplete quando o modal abrir
     setTimeout(() => {
       if (placeInputRef.current && window.google) {
         const autocomplete = new window.google.maps.places.Autocomplete(placeInputRef.current, {
@@ -193,13 +209,14 @@ const MapPage = () => {
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           if (place.geometry) {
+            setSelectedGooglePlace(place); // ✅ Salvar lugar
+            
             setReviewForm({
               ...reviewForm,
               placeName: place.name || '',
               placeAddress: place.formatted_address || ''
             });
             
-            // Centralizar o mapa no lugar selecionado
             if (map) {
               map.panTo(place.geometry.location);
               map.setZoom(16);
@@ -210,82 +227,175 @@ const MapPage = () => {
     }, 100);
   };
 
-  const submitReview = (e) => {
-    e.preventDefault();
+  //  envia a avaliacao pro backend
+const submitReview = async (e) => {
+  e.preventDefault();
+  
+  if (isSubmitting) {
+    console.log('⏳ Já existe uma submissão em andamento');
+    return;
+  }
+
+  console.log('🚀 Iniciando envio de avaliação...');
+  console.log('📝 reviewForm:', reviewForm);
+  console.log('📍 selectedGooglePlace:', selectedGooglePlace);
+  
+  // Validações básicas
+  if (!reviewForm.placeName.trim()) {
+    alert('Por favor, preencha o nome do local');
+    return;
+  }
+
+  if (!selectedGooglePlace || !selectedGooglePlace.geometry) {
+    alert('Por favor, selecione um local válido do Google Maps');
+    return;
+  }
+
+  setIsSubmitting(true);
+
+try {
+    const placeImageUrl = getPlacePhotoUrl(selectedGooglePlace);
+    console.log('📸 URL da imagem:', placeImageUrl);
     
-    // Criar novo local com avaliação
-    const newLocation = {
-      id: locations.length + 1,
-      name: reviewForm.placeName,
-      position: center, // Na implementação real, pegar do lugar selecionado
-      rating: (reviewForm.acolhimento + reviewForm.ruidoBaixo + reviewForm.iluminacao + reviewForm.espacoCalmo) / 4,
-      reviews: 1,
-      image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400',
-      category: 'Novo',
-      isFavorite: false,
-      teaRatings: {
-        acolhimento: reviewForm.acolhimento,
-        ruidoBaixo: reviewForm.ruidoBaixo,
-        iluminacao: reviewForm.iluminacao,
-        espacoCalmo: reviewForm.espacoCalmo
-      },
-      comentario: reviewForm.comentario
+    // cria o local no banco
+    const localData = {
+      nome: reviewForm.placeName,
+      endereco: reviewForm.placeAddress || 'Endereço não informado',
+      latitude: selectedGooglePlace.geometry.location.lat(),
+      longitude: selectedGooglePlace.geometry.location.lng(),
+      categoria: reviewForm.categoria || 'outro',
+      descricao: reviewForm.comentario || '',
+      imagem: placeImageUrl // ✅ Adicionar imagem
     };
 
-    setLocations([...locations, newLocation]);
-    setShowReviewModal(false);
+    console.log('📍 Criando local:', localData);
+
+    const localResponse = await locaisAPI.create(localData);
     
-    // Limpar formulário
+    console.log('📥 Resposta do servidor (local):', localResponse);
+    
+    if (!localResponse.success) {
+      throw new Error(localResponse.message || 'Erro ao criar local');
+    }
+
+    const localId = localResponse.data.id;
+    console.log('✅ Local criado com ID:', localId);
+
+      // cria a avaliacao desse local
+    const avaliacaoData = {
+      local_id: localId,
+      nivel_ruido: reviewForm.nivelRuido,
+      iluminacao: reviewForm.iluminacao,
+      cheiros_fortes: reviewForm.cheirosFortes ? 1 : 0,
+      movimento_visual: reviewForm.movimentoVisual,
+      espaco_calmo: reviewForm.espacoCalmo ? 1 : 0,
+      banheiro_acessivel: reviewForm.banheiroAcessivel ? 1 : 0,
+      sinalizacao_visual: reviewForm.sinalizacaoVisual,
+      mapas_rotas: reviewForm.mapasRotas ? 1 : 0,
+      controle_lotacao: reviewForm.controleLotacao,
+      filas_preferenciais: reviewForm.filasPreferenciais ? 1 : 0,
+      horarios_tranquilos: reviewForm.horariosTranquilos ? 1 : 0,
+      mudancas_ambiente: reviewForm.mudancasAmbiente,
+      agendamento_antecipado: reviewForm.agendamentoAntecipado ? 1 : 0,
+      temperatura_confortavel: reviewForm.temperaturaConfortavel,
+      assentos_confortaveis: reviewForm.assentosConfortaveis ? 1 : 0,
+      espaco_pessoal: reviewForm.espacoPessoal,
+      comentario: reviewForm.comentario || null,
+      nota_geral: calcularNotaGeral()
+    };
+
+    console.log('⭐ Criando avaliação:', avaliacaoData);
+
+    const avaliacaoResponse = await avaliacoesAPI.create(avaliacaoData);
+    
+    console.log('📥 Resposta do servidor (avaliação):', avaliacaoResponse);
+
+    if (!avaliacaoResponse.success) {
+      throw new Error(avaliacaoResponse.message || 'Erro ao criar avaliação');
+    }
+
+    console.log('✅ Avaliação criada com sucesso!');
+
+    // Limpa o formulário
     setReviewForm({
       placeName: '',
       placeAddress: '',
+      categoria: 'outro',
       nivelRuido: 3,
       iluminacao: 'natural',
       cheirosFortes: false,
       movimentoVisual: 'medio',
-      espacoCalmo: true,
-      banheiroAcessivel: true,
+      espacoCalmo: false,
+      banheiroAcessivel: false,
       sinalizacaoVisual: 3,
-      mapasRotas: true,
-      controleLotacao: 'tranquilo',
+      mapasRotas: false,
+      controleLotacao: 'moderado',
       filasPreferenciais: false,
-      horariosTranquilos: true,
-      mudancasAmbiente: 'baixa',
+      horariosTranquilos: false,
+      mudancasAmbiente: 'media',
       agendamentoAntecipado: false,
       temperaturaConfortavel: 3,
-      assentosConfortaveis: true,
-      espacoPessoal: 'amplo',
+      assentosConfortaveis: false,
+      espacoPessoal: 'medio',
       comentario: ''
     });
 
-    alert('Avaliação adicionada com sucesso!');
-  };
+setSelectedGooglePlace(null);
+    setShowReviewModal(false);
+    alert('✅ Avaliação publicada com sucesso!');
 
-  const sortedLocations = [...locations].sort((a, b) => b.rating - a.rating);
+    // atualiza os locais no mapa
+    console.log('🔄 Recarregando locais...');
+    await loadLocations();
 
-  // Função para filtrar locais
+  } catch (error) {
+    console.error('❌ Erro completo:', error);
+    console.error('❌ Erro.response:', error.response);
+    console.error('❌ Erro.message:', error.message);
+    
+    let mensagemErro = 'Erro desconhecido';
+    
+    if (error.response?.data?.message) {
+      mensagemErro = error.response.data.message;
+    } else if (error.message) {
+      mensagemErro = error.message;
+    }
+    
+    alert(`Erro ao enviar avaliação: ${mensagemErro}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+// calcula a nota geral baseada nos criterios
+const calcularNotaGeral = () => {
+  const notas = [
+    reviewForm.nivelRuido,
+    reviewForm.sinalizacaoVisual,
+    reviewForm.temperaturaConfortavel
+  ];
+  
+  const soma = notas.reduce((acc, nota) => acc + nota, 0);
+  const media = soma / notas.length;
+  
+  return parseFloat(media.toFixed(2));
+};
+  
+  // filtra locais baseado nos filtros ativos
   const getFilteredLocations = () => {
     return locations.filter(location => {
-      // Filtro por categoria
       if (filters.categoria !== 'todas' && location.category !== filters.categoria) {
         return false;
       }
-
-      // Filtro por ruído baixo (rating >= 4)
       if (filters.baixoRuido && location.teaRatings.ruidoBaixo < 4) {
         return false;
       }
-
-      // Filtro por iluminação suave (rating >= 4)
       if (filters.iluminacaoSuave && location.teaRatings.iluminacao < 4) {
         return false;
       }
-
-      // Filtro por espaço calmo (rating >= 4)
       if (filters.espacoCalmo && location.teaRatings.espacoCalmo < 4) {
         return false;
       }
-
       return true;
     });
   };
@@ -309,14 +419,72 @@ const MapPage = () => {
           <nav className="nav">
             <Link to="/parceiros">Parceiros</Link>
             <Link to="/quem-somos">Quem Somos</Link>
-            <Link to="/login">
-              <button className="btn-primary">Login</button>
-            </Link>
+            
+            {isLoggedIn ? (
+              <div className="user-menu-container">
+                <button 
+                  className="user-avatar-btn"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                >
+                  {userData.avatar ? (
+                    <img src={userData.avatar} alt={userData.name} className="avatar-img" />
+                  ) : (
+                    <div className="avatar-placeholder">
+                      <User size={20} />
+                    </div>
+                  )}
+                  <span className="user-name">{userData.nome?.split(' ')[0] || 'Usuário'}</span>
+                </button>
+
+                {showUserMenu && (
+                  <div className="user-dropdown">
+                    <div className="user-info">
+                      <div className="user-avatar-large">
+                        {userData.avatar ? (
+                          <img src={userData.avatar} alt={userData.nome} />
+                        ) : (
+                          <User size={32} />
+                        )}
+                      </div>
+                      <div className="user-details">
+                        <strong>{userData.nome}</strong>
+                        <span>{userData.email}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="dropdown-divider"></div>
+                    
+                    <Link to="/perfil" className="dropdown-item">
+                      <User size={18} />
+                      Meu Perfil
+                    </Link>
+                    
+                    <Link to="/configuracoes" className="dropdown-item">
+                      <Settings size={18} />
+                      Configurações
+                    </Link>
+                    
+                    <div className="dropdown-divider"></div>
+                    
+                    <button 
+                      className="dropdown-item logout-btn"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={18} />
+                      Sair
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link to="/login">
+                <button className="btn-primary">Login</button>
+              </Link>
+            )}
           </nav>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="map-content">
         <div className="map-section">
           <div className="section-header">
@@ -416,7 +584,6 @@ const MapPage = () => {
                 fullscreenControl: true,
               }}
             >
-              {/* Marcadores */}
               {filteredLocations.map((location) => (
                 <Marker
                   key={location.id}
@@ -429,7 +596,6 @@ const MapPage = () => {
                 />
               ))}
 
-              {/* InfoWindow */}
               {selectedPlace && (
                 <InfoWindow
                   position={selectedPlace.position}
@@ -477,7 +643,7 @@ const MapPage = () => {
           </div>
         </div>
 
-        {/* Ranking Sidebar */}
+        {/* Ranking via Sidebar */}
         <aside className="ranking-section">
           <h2 className="ranking-title">Ranking</h2>
           
@@ -523,6 +689,7 @@ const MapPage = () => {
                       {location.category === 'lazer' && '🎡 Lazer'}
                       {location.category === 'cultura' && '🎭 Cultura'}
                       {location.category === 'saude' && '🏥 Saúde'}
+                      {location.category === 'outro' && '📍 Outro'}
                     </div>
                     
                     <button 
@@ -582,6 +749,7 @@ const MapPage = () => {
                   placeholder="Digite o nome do local (ex: Escola Municipal...)"
                   required
                   autoComplete="off"
+                  disabled={isSubmitting}
                 />
                 <small className="helper-text">💡 Comece a digitar e selecione da lista do Google</small>
               </div>
@@ -593,7 +761,25 @@ const MapPage = () => {
                   value={reviewForm.placeAddress}
                   onChange={(e) => setReviewForm({...reviewForm, placeAddress: e.target.value})}
                   placeholder="Endereço do local"
+                  disabled={isSubmitting}
                 />
+              </div>
+              <div className="form-group">
+              <label>📍 Categoria do Local *</label>
+              <select 
+                value={reviewForm.categoria}
+                onChange={(e) => setReviewForm({...reviewForm, categoria: e.target.value})}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">Selecione uma categoria</option>
+                <option value="educacao">🎓 Educação</option>
+                <option value="lazer">🎡 Lazer</option>
+                <option value="cultura">🎭 Cultura</option>
+                <option value="saude">🏥 Saúde</option>
+                <option value="comercio">🛒 Comércio</option>
+                <option value="outro">📍 Outro</option>
+              </select>
               </div>
 
               {/* AMBIENTE SENSORIAL */}
@@ -612,6 +798,7 @@ const MapPage = () => {
                     max="5"
                     value={reviewForm.nivelRuido}
                     onChange={(e) => setReviewForm({...reviewForm, nivelRuido: parseInt(e.target.value)})}
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -620,6 +807,7 @@ const MapPage = () => {
                   <select 
                     value={reviewForm.iluminacao}
                     onChange={(e) => setReviewForm({...reviewForm, iluminacao: e.target.value})}
+                    disabled={isSubmitting}
                   >
                     <option value="suave">☀️ Suave</option>
                     <option value="natural">🌤️ Natural</option>
@@ -633,6 +821,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.cheirosFortes}
                       onChange={(e) => setReviewForm({...reviewForm, cheirosFortes: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>🌸 Há cheiros fortes no ambiente</span>
                   </label>
@@ -643,6 +832,7 @@ const MapPage = () => {
                   <select 
                     value={reviewForm.movimentoVisual}
                     onChange={(e) => setReviewForm({...reviewForm, movimentoVisual: e.target.value})}
+                    disabled={isSubmitting}
                   >
                     <option value="pouco">🔵 Pouco</option>
                     <option value="medio">🟢 Médio</option>
@@ -656,6 +846,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.espacoCalmo}
                       onChange={(e) => setReviewForm({...reviewForm, espacoCalmo: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>🌿 Espaço Calmo Disponível</span>
                   </label>
@@ -672,6 +863,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.banheiroAcessivel}
                       onChange={(e) => setReviewForm({...reviewForm, banheiroAcessivel: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>♿ Banheiro Acessível</span>
                   </label>
@@ -688,6 +880,7 @@ const MapPage = () => {
                     max="5"
                     value={reviewForm.sinalizacaoVisual}
                     onChange={(e) => setReviewForm({...reviewForm, sinalizacaoVisual: parseInt(e.target.value)})}
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -697,6 +890,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.mapasRotas}
                       onChange={(e) => setReviewForm({...reviewForm, mapasRotas: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>🗺️ Mapas e Rotas Internas</span>
                   </label>
@@ -707,6 +901,7 @@ const MapPage = () => {
                   <select 
                     value={reviewForm.controleLotacao}
                     onChange={(e) => setReviewForm({...reviewForm, controleLotacao: e.target.value})}
+                    disabled={isSubmitting}
                   >
                     <option value="tranquilo">🟢 Tranquilo</option>
                     <option value="moderado">🟡 Moderado</option>
@@ -720,6 +915,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.filasPreferenciais}
                       onChange={(e) => setReviewForm({...reviewForm, filasPreferenciais: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>📋 Filas Preferenciais</span>
                   </label>
@@ -736,6 +932,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.horariosTranquilos}
                       onChange={(e) => setReviewForm({...reviewForm, horariosTranquilos: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>🔓 Horários Tranquilos Disponíveis</span>
                   </label>
@@ -746,6 +943,7 @@ const MapPage = () => {
                   <select 
                     value={reviewForm.mudancasAmbiente}
                     onChange={(e) => setReviewForm({...reviewForm, mudancasAmbiente: e.target.value})}
+                    disabled={isSubmitting}
                   >
                     <option value="baixa">🟢 Baixa</option>
                     <option value="media">🟡 Média</option>
@@ -759,6 +957,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.agendamentoAntecipado}
                       onChange={(e) => setReviewForm({...reviewForm, agendamentoAntecipado: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>📅 Agendamento Antecipado Disponível</span>
                   </label>
@@ -780,6 +979,7 @@ const MapPage = () => {
                     max="5"
                     value={reviewForm.temperaturaConfortavel}
                     onChange={(e) => setReviewForm({...reviewForm, temperaturaConfortavel: parseInt(e.target.value)})}
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -789,6 +989,7 @@ const MapPage = () => {
                       type="checkbox"
                       checked={reviewForm.assentosConfortaveis}
                       onChange={(e) => setReviewForm({...reviewForm, assentosConfortaveis: e.target.checked})}
+                      disabled={isSubmitting}
                     />
                     <span>🪑 Assentos Confortáveis e Espaçados</span>
                   </label>
@@ -799,6 +1000,7 @@ const MapPage = () => {
                   <select 
                     value={reviewForm.espacoPessoal}
                     onChange={(e) => setReviewForm({...reviewForm, espacoPessoal: e.target.value})}
+                    disabled={isSubmitting}
                   >
                     <option value="amplo">🟢 Amplo</option>
                     <option value="medio">🟡 Médio</option>
@@ -814,18 +1016,30 @@ const MapPage = () => {
                   onChange={(e) => setReviewForm({...reviewForm, comentario: e.target.value})}
                   placeholder="Conte sua experiência neste local..."
                   rows="4"
+                  disabled={isSubmitting}
                 />
               </div>
 
-              <button type="submit" className="btn-submit-review">
-                ✨ Publicar Avaliação
+              {/* BOTÃO */}
+              <button 
+                type="submit" 
+                className="btn-submit-review"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={20} className="spinner" />
+                    Enviando...
+                  </>
+                ) : (
+                  '✨ Publicar Avaliação'
+                )}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Footer */}
       <footer className="footer">
         <div className="container footer-content">
           <div className="footer-logo">

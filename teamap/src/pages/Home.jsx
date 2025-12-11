@@ -8,7 +8,7 @@ import banner from '../assets/Banner1.png'
 const Home = () => {
   return (
     <div className="landing-page">
-      {/* Header/Navbar */}
+      {/* Navbar */}
       <header className="header">
         <div className="container">
           <div className="logo">

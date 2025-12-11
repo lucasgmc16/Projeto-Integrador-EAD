@@ -10,6 +10,7 @@ const EsqueceuSenha = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // valida se o email ta no formato certo
   const validateEmail = (email) => {
     return /\S+@\S+\.\S+/.test(email);
   };
@@ -28,7 +29,7 @@ const EsqueceuSenha = () => {
       return;
     }
 
-    // Simula envio
+    // simula o envio do email
     setLoading(true);
     
     setTimeout(() => {
@@ -40,7 +41,6 @@ const EsqueceuSenha = () => {
 
   return (
     <div className="forgot-password-page">
-      {/* Header */}
       <header className="header">
         <div className="container">
           <Link to="/" className="logo">
@@ -54,9 +54,9 @@ const EsqueceuSenha = () => {
         </div>
       </header>
 
-      {/* Content */}
       <main className="forgot-password-content">
         <div className="forgot-password-container">
+          {/* mostra o formulario se ainda nao enviou */}
           {!success ? (
             <div className="forgot-password-card">
               <div className="card-header">
@@ -116,6 +116,7 @@ const EsqueceuSenha = () => {
               </form>
             </div>
           ) : (
+            // mensagem de sucesso depois que envia
             <div className="success-card">
               <div className="success-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -136,6 +137,7 @@ const EsqueceuSenha = () => {
                   Voltar para o login
                 </Link>
                 
+                {/* botao pra reenviar caso nao tenha recebido */}
                 <button 
                   className="btn-resend"
                   onClick={() => setSuccess(false)}
@@ -153,7 +155,6 @@ const EsqueceuSenha = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="footer">
         <div className="container footer-content">
           <div className="footer-logo">

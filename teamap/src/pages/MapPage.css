@@ -259,7 +259,7 @@
 .map-section {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.5rem;
 }
 
 .section-header {
@@ -267,8 +267,8 @@
   justify-content: space-between;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 1.7rem;
+  margin-bottom: 0.5rem; 
 }
 
 .section-subtitle {
@@ -369,7 +369,9 @@
   gap: 2rem;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  margin-top: 1rem; 
+  margin-bottom: 1rem; 
+  animation: slideDown 0.3s ease;
 }
 
 .filter-group {
@@ -875,6 +877,21 @@
   margin-top: -0.25rem;
 }
 
+/* Animação de loading */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-submit-review:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Esconde as sugestões do navegador */
 input[autocomplete="off"]::-webkit-credentials-auto-fill-button {
   visibility: hidden;
@@ -1082,5 +1099,17 @@ input[autocomplete="off"]::-webkit-credentials-auto-fill-button {
 
   .ranking-card {
     min-width: 280px;
+  }
+  
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

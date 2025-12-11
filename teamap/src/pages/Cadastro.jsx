@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, UserPlus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, User, UserPlus, Loader2 } from 'lucide-react';
 import './Cadastro.css';
 import logo from '../assets/Logo.png';
+import { authAPI } from '../services/api'; 
 
 const Cadastro = () => {
+  const navigate = useNavigate();
+  
+  // guarda os dados do form
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,18 +19,26 @@ const Cadastro = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false); 
+  const [apiError, setApiError] = useState(''); 
 
+  // atualiza os campos quando digita
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    // limpa erro do campo que ta sendo editado
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+    if (apiError) {
+      setApiError(''); 
+    }
   };
 
+  // valida os campos antes de enviar
   const validateForm = () => {
     const newErrors = {};
     
@@ -58,12 +70,42 @@ const Cadastro = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  // envia os dados pro backend
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
     
-    if (validateForm()) {
-      console.log('Cadastro data:', formData);
-      alert('Cadastro realizado! (Front-end only)');
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // chama a api de cadastro
+      const response = await authAPI.register(
+        formData.name,
+        formData.email,
+        formData.password
+      );
+
+      console.log('Cadastro realizado com sucesso:', response);
+
+      alert('Cadastro realizado com sucesso! Você será redirecionado...');
+
+      // manda pro mapa depois de cadastrar
+      setTimeout(() => {
+        navigate('/mapatea');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      
+      // mostra erro se der ruim
+      setApiError(error.message || 'Erro ao realizar cadastro. Tente novamente.');
+      
+    } finally {
+      setLoading(false); 
     }
   };
 
@@ -94,7 +136,14 @@ const Cadastro = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="cadastro-form">
-              {/* Name Field */}
+              {/* mostra erro da api se tiver */}
+              {apiError && (
+                <div className="alert alert-error">
+                  {apiError}
+                </div>
+              )}
+
+              {/* campo nome */}
               <div className="form-group">
                 <label htmlFor="name">Nome completo</label>
                 <div className={`input-wrapper ${errors.name ? 'error' : ''}`}>
@@ -106,12 +155,13 @@ const Cadastro = () => {
                     placeholder="Seu nome"
                     value={formData.name}
                     onChange={handleChange}
+                    disabled={loading}
                   />
                 </div>
                 {errors.name && <span className="error-message">{errors.name}</span>}
               </div>
 
-              {/* Email Field */}
+              {/* campo email */}
               <div className="form-group">
                 <label htmlFor="email">Email</label>
                 <div className={`input-wrapper ${errors.email ? 'error' : ''}`}>
@@ -123,12 +173,13 @@ const Cadastro = () => {
                     placeholder="seu@email.com"
                     value={formData.email}
                     onChange={handleChange}
+                    disabled={loading}
                   />
                 </div>
                 {errors.email && <span className="error-message">{errors.email}</span>}
               </div>
 
-              {/* Password Field */}
+              {/* campo senha */}
               <div className="form-group">
                 <label htmlFor="password">Senha</label>
                 <div className={`input-wrapper ${errors.password ? 'error' : ''}`}>
@@ -140,11 +191,14 @@ const Cadastro = () => {
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
+                    disabled={loading}
                   />
+                  {/* botao pra mostrar/esconder senha */}
                   <button
                     type="button"
                     className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -152,7 +206,7 @@ const Cadastro = () => {
                 {errors.password && <span className="error-message">{errors.password}</span>}
               </div>
 
-              {/* Confirm Password Field */}
+              {/* confirmar senha */}
               <div className="form-group">
                 <label htmlFor="confirmPassword">Confirmar senha</label>
                 <div className={`input-wrapper ${errors.confirmPassword ? 'error' : ''}`}>
@@ -164,11 +218,13 @@ const Cadastro = () => {
                     placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={handleChange}
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     className="toggle-password"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={loading}
                   >
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -176,10 +232,10 @@ const Cadastro = () => {
                 {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
               </div>
 
-              {/* Terms */}
+              {/* checkbox termos */}
               <div className="terms-section">
                 <label className="terms-checkbox">
-                  <input type="checkbox" required />
+                  <input type="checkbox" required disabled={loading} />
                   <span>
                     Concordo com os{' '}
                     <Link to="/termos">Termos de Uso</Link>
@@ -189,17 +245,27 @@ const Cadastro = () => {
                 </label>
               </div>
 
-              {/* Submit Button */}
-              <button type="submit" className="btn-cadastro">
-                Criar conta
+              {/* botao de enviar */}
+              <button 
+                type="submit" 
+                className="btn-cadastro"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={20} className="spinner" />
+                    Criando conta...
+                  </>
+                ) : (
+                  'Criar conta'
+                )}
               </button>
 
-              {/* Divider */}
               <div className="divider">
                 <span>ou</span>
               </div>
 
-              {/* Login Link */}
+              {/* link pra login se ja tiver conta */}
               <div className="login-section">
                 <p>Já tem uma conta?</p>
                 <Link to="/login" className="btn-login-link">
@@ -209,7 +275,6 @@ const Cadastro = () => {
             </form>
           </div>
 
-          {/* Side Info */}
           <div className="cadastro-side">
             <div className="side-content">
               <h2>Junte-se a nós e faça a diferença!</h2>

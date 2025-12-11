@@ -7,7 +7,6 @@ import logo from '../assets/Logo.png';
 const Privacidade = () => {
   return (
     <div className="privacidade-page">
-      {/* Header */}
       <header className="header">
         <div className="container">
           <Link to="/" className="logo">
@@ -25,7 +24,7 @@ const Privacidade = () => {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* titulo da pagina */}
       <section className="policy-hero">
         <div className="policy-container">
           <div className="hero-icon">
@@ -36,11 +35,10 @@ const Privacidade = () => {
         </div>
       </section>
 
-      {/* Content */}
       <main className="policy-content">
         <div className="policy-container">
           
-          {/* Introdução */}
+          {/* introducao basica sobre privacidade */}
           <section className="policy-section">
             <div className="section-icon">
               <Eye size={32} />
@@ -59,7 +57,7 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Dados Coletados */}
+          {/* explica quais dados a gente coleta */}
           <section className="policy-section">
             <div className="section-icon">
               <Database size={32} />
@@ -89,7 +87,7 @@ const Privacidade = () => {
             </ul>
           </section>
 
-          {/* Como Usamos */}
+          {/* para que usamos os dados */}
           <section className="policy-section">
             <div className="section-icon">
               <Users size={32} />
@@ -106,7 +104,6 @@ const Privacidade = () => {
             </ul>
           </section>
 
-          {/* Compartilhamento */}
           <section className="policy-section">
             <div className="section-icon">
               <Lock size={32} />
@@ -125,7 +122,7 @@ const Privacidade = () => {
             </ul>
           </section>
 
-          {/* Segurança */}
+          {/* como protegemos os dados */}
           <section className="policy-section">
             <div className="section-icon">
               <Shield size={32} />
@@ -148,7 +145,7 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Seus Direitos */}
+          {/* direitos do usuario pela lgpd */}
           <section className="policy-section">
             <div className="section-icon">
               <Users size={32} />
@@ -171,7 +168,6 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Cookies */}
           <section className="policy-section">
             <div className="section-icon">
               <Database size={32} />
@@ -190,7 +186,6 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Menores */}
           <section className="policy-section">
             <div className="section-icon">
               <AlertCircle size={32} />
@@ -207,7 +202,6 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Retenção */}
           <section className="policy-section">
             <div className="section-icon">
               <Database size={32} />
@@ -228,7 +222,7 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Alterações */}
+          {/* sobre mudanças na politica */}
           <section className="policy-section">
             <div className="section-icon">
               <AlertCircle size={32} />
@@ -245,7 +239,7 @@ const Privacidade = () => {
             </p>
           </section>
 
-          {/* Contato */}
+          {/* informacoes de contato */}
           <section className="policy-section contact-section">
             <div className="section-icon">
               <Users size={32} />
@@ -274,7 +268,6 @@ const Privacidade = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="footer">
         <div className="container footer-content">
           <div className="footer-logo">

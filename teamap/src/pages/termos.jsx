@@ -25,7 +25,6 @@ const Termos = () => {
         </div>
       </header>
 
-      {/* Hero */}
       <section className="policy-hero">
         <div className="policy-container">
           <div className="hero-icon">
@@ -36,7 +35,6 @@ const Termos = () => {
         </div>
       </section>
 
-      {/* Content */}
       <main className="policy-content">
         <div className="policy-container">
           
@@ -404,7 +402,7 @@ const Termos = () => {
             </p>
           </section>
 
-          {/* Contato */}
+          {/* Nosso Contato */}
           <section className="policy-section contact-section">
             <div className="section-icon">
               <FileText size={32} />
@@ -436,7 +434,6 @@ const Termos = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="footer">
         <div className="container footer-content">
           <div className="footer-logo">

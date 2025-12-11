@@ -40,7 +40,6 @@ const QuemSomos = () => {
 
   return (
     <div className="quem-somos-page">
-      {/* Header */}
       <header className="header">
         <div className="container">
           <Link to="/" className="logo">
@@ -119,7 +118,7 @@ const QuemSomos = () => {
               </p>
             </div>
 
-            {/* Visão */}
+            {/* Nossa Visão */}
             <div className="mvv-card visao">
               <div className="mvv-icon">
                 <Eye size={40} />
@@ -135,7 +134,7 @@ const QuemSomos = () => {
         </div>
       </section>
 
-      {/* Valores */}
+      {/* Nossos Valores */}
       <section className="valores-section">
         <div className="section-container">
           <div className="section-header">
@@ -205,7 +204,7 @@ const QuemSomos = () => {
         </div>
       </section>
 
-      {/* Impacto */}
+      {/* Impacto do projeto*/}
       <section className="impacto-section">
         <div className="section-container">
           <div className="impacto-content">
